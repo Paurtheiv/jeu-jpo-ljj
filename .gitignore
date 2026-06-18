@@ -1,0 +1,13 @@
+# RGPD — Médias personnels non versionnés
+assets/davina_*.jpg
+assets/ugo_*.jpg
+assets/dema_*.jpg
+assets/voix/davina/
+assets/voix/ugo/
+assets/voix/dema/
+assets/video_projet.mp4
+assets/vvf.mp4
+
+# Système
+.DS_Store
+Thumbs.db

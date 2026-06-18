@@ -1,0 +1,546 @@
+<!-- 
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  PROJET JPO LYCÉE JEAN JAURÈS — BTS CIEL A · Session 2026   ║
+  ║  Jeu de visite guidée interactif avec 3 guides étudiants     ║
+  ║                                                              ║
+  ║  RGPD / CONFIDENTIALITÉ :                                    ║
+  ║  Les fichiers médias (photos des guides, voix IA clonées,    ║
+  ║  vidéos) ne sont pas inclus dans ce dépôt public.            ║
+  ║  Ils sont référencés dans assets/ (non versionnés).          ║
+  ║  Les voix ont été générées par IA (TopMedia) à partir des    ║
+  ║  voix réelles des étudiants avec leur consentement.          ║
+  ║                                                              ║
+  ║  Auteur : Paurtheiv Krishna Laxman                           ║
+  ║  Contact : paurtheiv.laxman.fr@gmail.com                     ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPO Jean Jaurès - BTS CIEL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* STYLE GLOBAL */
+        :root { 
+            --primary: #00e5ff; 
+            --glass: rgba(10, 15, 25, 0.85); 
+            --davina-color: #d63384; 
+            --ugo-color: #ff8c00;    
+            --dema-color: #20c997;   
+        }
+        
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; font-family: 'Roboto', sans-serif; background-color: #000; display: flex; justify-content: center; align-items: center; }
+
+        /* ECRAN DE DEMARRAGE (POUR ACTIVER LE SON) */
+        #start-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #000 url('entree_lycee.jpg') center/cover no-repeat;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #start-screen::before { content:''; position: absolute; inset: 0; background: rgba(0,0,0,0.7); }
+        
+        .start-btn {
+            position: relative; z-index: 2;
+            padding: 20px 40px; font-family: 'Rajdhani', sans-serif; font-size: 1.5rem; font-weight: bold;
+            color: #000; background: var(--primary); border: none; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 0 20px var(--primary);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* FOND D'ECRAN */
+        #background { 
+            position: absolute; inset: 0; 
+            transition: background-image 0.5s ease-in-out; 
+            z-index: 0; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+            background-size: contain; 
+        }
+        #background.force-contain { background-size: contain !important; background-color: #000 !important; }
+
+        .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 5%, transparent 60%); z-index: 1; pointer-events: none; }
+
+        #char-container { position: absolute; z-index: 2; pointer-events: none; transition: all 0.5s ease; }
+        
+        @media (min-width: 601px) {
+            #char-container { bottom: 0; left: 10%; height: 45%; max-height: 500px; }
+            #ui-layer { right: 10%; width: 40%; left: auto !important; }
+            .jj-selection { left: 2% !important; height: 28% !important; bottom: 5% !important; }
+        }
+        
+        @media (max-width: 600px) {
+            #char-container { bottom: 25%; left: 50%; transform: translateX(-50%); height: 30%; max-height: 250px; }
+            #ui-layer { left: 5%; width: 90%; }
+            .jj-selection { left: 5% !important; height: 20% !important; bottom: 35% !important; transform: none !important; }
+        }
+
+        #char-img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(5px 5px 15px rgba(0,0,0,0.8)); }
+
+        #game-ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: flex-end; z-index: 10; pointer-events: none; }
+        .ui-wrapper { position: relative; width: 100%; max-width: 1200px; height: 100%; pointer-events: auto; }
+        
+        #ui-layer { position: absolute; bottom: 20px; display: flex; flex-direction: column; gap: 10px; transition: bottom 0.3s; }
+        .ui-lifted { bottom: 80px !important; }
+
+        #dialogue-box { 
+            background: var(--glass); 
+            border-left: 4px solid var(--primary); 
+            border-radius: 8px; padding: 15px; padding-top: 25px; 
+            backdrop-filter: blur(4px); 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8); 
+            min-height: 60px; position: relative; 
+            transition: border-color 0.3s;
+        }
+
+        #dialogue-box.style-DAVINA { border-color: var(--davina-color); }
+        #dialogue-box.style-UGO { border-color: var(--ugo-color); }
+        #dialogue-box.style-DEMA { border-color: var(--dema-color); }
+
+        #speaker-name { 
+            position: absolute; top: -10px; left: 10px; 
+            background: var(--primary); color: #000; 
+            padding: 4px 10px; border-radius: 4px; 
+            font-family: 'Rajdhani'; font-weight: 800; font-size: 0.9rem; 
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        
+        #text-content { 
+            font-family: 'Roboto', sans-serif; 
+            font-size: 1.1rem; 
+            line-height: 1.5; 
+            color: #f0f0f0; 
+            text-shadow: 1px 1px 2px #000; 
+            max-height: 35vh; overflow-y: auto; padding-right: 5px; 
+        }
+
+        #choices-area { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; opacity: 0; pointer-events: none; transform: translateY(10px); transition: 0.3s ease; }
+        #choices-area.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+
+        .btn-choice { 
+            background: rgba(20, 20, 20, 0.9); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: white; padding: 12px; border-radius: 6px; 
+            font-family: 'Rajdhani'; font-size: 1rem; font-weight: bold; 
+            cursor: pointer; text-align: center; transition: 0.2s; 
+        }
+        
+        .style-DAVINA + #choices-area .btn-choice:hover { background: var(--davina-color); color: white; border-color:white; }
+        .style-UGO + #choices-area .btn-choice:hover { background: var(--ugo-color); color: black; border-color:black; }
+        .style-DEMA + #choices-area .btn-choice:hover { background: var(--dema-color); color: black; border-color:black; }
+        .btn-choice:hover { background: var(--primary); color: black; transform: scale(1.01); }
+
+        .char-select-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .char-card { background: rgba(0,0,0,0.8); border: 2px solid var(--primary); padding: 15px 5px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.3s; font-family: 'Rajdhani'; font-weight: bold; color: white; text-transform: uppercase; font-size: 1rem; }
+        .char-card:hover { transform: scale(1.05); box-shadow: 0 0 10px white; background: var(--primary); color: black; }
+
+        .input-group { display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border-radius: 6px; border: 2px solid var(--primary); background: rgba(0,0,0,0.8); color: white; font-size: 1.1rem; }
+        button.valid-btn { padding: 0 20px; background: var(--primary); border: none; border-radius: 6px; font-weight: bold; font-family: 'Rajdhani'; cursor: pointer; }
+
+        #video-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        #skip-btn { position: absolute; top: 20px; right: 20px; z-index: 101; font-family: 'Rajdhani'; font-size: 1rem; padding: 10px 20px; background: rgba(0,0,0,0.6); color: white; border: 1px solid white; border-radius: 50px; cursor: pointer; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <button class="start-btn" onclick="startExperience()">COMMENCER LA VISITE</button>
+    </div>
+
+    <form name="visite-jpo" method="POST" data-netlify="true" hidden>
+        <input type="hidden" name="form-name" value="visite-jpo" />
+        <input type="text" name="prenom" />
+        <input type="text" name="guide_choisi" />
+        <input type="text" name="statut" />
+    </form>
+
+    <div id="video-layer">
+        <button id="skip-btn" onclick="stopVideo()">PASSER</button>
+        <video id="main-player" playsinline></video>
+    </div>
+
+    <div id="background"></div>
+    <div class="overlay"></div>
+
+    <div id="game-ui" style="display:none;"> <div class="ui-wrapper">
+            <div id="char-container"><img id="char-img" src="" alt=""></div>
+            <div id="ui-layer">
+                <div id="dialogue-box">
+                    <div id="speaker-name">SYSTEM</div>
+                    <div id="text-content">Chargement...</div>
+                </div>
+                <div id="choices-area"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let userData = { prenom: "", statut: "", score: 0, profil: "", interets: "", selectedGuide: "" };
+    let currentVideoCallback = null;
+    let typeWriterTimeout = null;
+    let currentAudio = null;
+
+    // --- DEMARRAGE MANUEL POUR ACTIVER LE SON ---
+    function startExperience() {
+        document.getElementById('start-screen').style.display = 'none'; // Cache l'écran titre
+        document.getElementById('game-ui').style.display = 'flex'; // Affiche le jeu
+        goto('intro'); // Lance l'intro ET LE SON
+    }
+
+    // --- FONCTION SON ---
+    function playSceneAudio(sceneId) {
+        let guide = userData.selectedGuide ? userData.selectedGuide.toLowerCase() : '';
+        let path = "";
+
+        // 1. SCENES DE JEAN JAURES
+        if (sceneId === 'intro') path = 'assets/voix/jean jaures/jean_presente.mp3';
+        else if (sceneId === 'selection_perso') path = 'assets/voix/jean jaures/jean_guide.mp3';
+        else if (sceneId === 'intro_hack') path = 'assets/voix/jean jaures/jean_pth.mp3';
+        else if (sceneId === 'demande_save') path = 'assets/voix/jean jaures/jean_bdd.mp3'; 
+        else if (sceneId === 'final_message') path = 'assets/voix/jean jaures/jean_360.mp3';
+
+        // 2. SCENES DES GUIDES
+        else if (sceneId === 'accueil') path = `voix/${guide}/${guide}_hi.mp3`;
+        else if (sceneId === 'question_statut') path = `voix/${guide}/${guide}_enc.mp3`;
+        else if (sceneId === 'transition_couloir') path = `voix/${guide}/${guide}_fin_qcm.mp3`;
+        else if (sceneId === 'couloir') path = `voix/${guide}/${guide}_couloir.mp3`;
+        else if (sceneId === 'porte' && guide !== 'davina') path = `voix/${guide}/${guide}_porte.mp3`; 
+        else if (sceneId === 'salle') path = `voix/${guide}/${guide}_salle.mp3`;
+
+        // 3. PROJETS
+        else if (sceneId.startsWith('projet_') && !sceneId.includes('video')) {
+            let num = sceneId.split('_')[1]; 
+            path = `voix/${guide}/projets/${guide}_p${num}.mp3`;
+        }
+        else if (sceneId === 'projet_video_demo') path = `voix/${guide}/projets/${guide}_vp.mp3`;
+
+        // 4. QUESTIONS
+        else if (sceneId.startsWith('q_col_')) {
+            let num = sceneId.split('_')[2];
+            path = `voix/${guide}/questions_collégien/${guide}_q${num}.mp3`;
+        }
+        else if (sceneId.startsWith('q_lyc_')) {
+            let num = sceneId.split('_')[2];
+            path = `voix/${guide}/questions_lyccéen/${guide}_q${num}.mp3`; // Correction "lyccéen"
+        }
+        else if (sceneId.startsWith('q_etu_')) {
+            let num = sceneId.split('_')[2];
+            path = `voix/${guide}/questions_etudiant/${guide}_q${num}.mp3`;
+        }
+
+        if(path) {
+            if(currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+            currentAudio = new Audio(path);
+            currentAudio.play().catch(e => console.log("Erreur audio : " + e));
+        }
+    }
+
+    const CHARS = {
+        'JJ': { name: 'JEAN JAURÈS', img: 'Jean_Jaures.jpg' }, 
+        'DAVINA': { name: 'DAVINA' },
+        'UGO': { name: 'UGO' },
+        'DEMA': { name: 'DEMA' }
+    };
+
+    const scenes = {
+        'intro': {
+            char: 'JJ',
+            text: "Bonjour. Je suis Jean Jaurès. J'ai donné mon nom à cet établissement, lieu de savoir et de progrès. Je vous souhaite la bienvenue.",
+            bg: 'entree_lycee.jpg', 
+            choices: [ { txt: "Entrer dans le lycée", next: 'selection_perso' } ]
+        },
+        'selection_perso': {
+            char: 'JJ',
+            text: "Pour découvrir le BTS CIEL, je laisse la parole à la jeune génération. Choisissez votre guide :",
+            bg: 'select_acc.jpg', 
+            adjustJJ: true, 
+            customChoices: true 
+        },
+        'accueil': {
+            useGuide: true, 
+            text: () => {
+                if(userData.selectedGuide === 'UGO') return "Salut ! Je suis Ugo. Bienvenue au lycée. C'est quoi ton prénom ?";
+                if(userData.selectedGuide === 'DEMA') return "Salut l'équipe ! Moi c'est Dema. On va visiter ensemble. Ton prénom ?";
+                return "Salut ! Moi c'est Davina. Ravie de t'accueillir. Tu t'appelles comment ?";
+            },
+            bgType: 'accueil', 
+            input: true, next: 'question_statut'
+        },
+        'question_statut': {
+            useGuide: true, bgType: 'accueil',
+            text: (name) => `Enchanté ${name}. Pour adapter mes questions, dis-moi : tu es collégien, lycéen ou étudiant ?`,
+            choices: [
+                { txt: "Collégien", action: () => routerQuiz('COL'), save: 'statut' },
+                { txt: "Lycéen",    action: () => routerQuiz('LYC'), save: 'statut' },
+                { txt: "Étudiant",  action: () => routerQuiz('ETU'), save: 'statut' }
+            ]
+        },
+        // --- QCM ---
+        'q_col_1': { useGuide: true, bgType: 'accueil', text: "Q1/5 : Quand tu utilises un ordi, tu préfères...", choices: [{txt:"Jouer",val:10,next:'q_col_2'}, {txt:"Comprendre comment ça marche",val:30,next:'q_col_2'}] },
+        'q_col_2': { useGuide: true, bgType: 'accueil', text: "Q2/5 : En technologie, ce que tu aimes c'est...", choices: [{txt:"Coder (Scratch)",val:30,next:'q_col_3'}, {txt:"Fabriquer des objets",val:20,next:'q_col_3'}] },
+        'q_col_3': { useGuide: true, bgType: 'accueil', text: "Q3/5 : Si tu pouvais créer un robot, il servirait à...", choices: [{txt:"Explorer Mars",val:20,next:'q_col_4'}, {txt:"Défendre / Protéger",val:0,next:'q_col_4'}] },
+        'q_col_4': { useGuide: true, bgType: 'accueil', text: "Q4/5 : Tu es plutôt...", choices: [{txt:"Travail en équipe",val:30,next:'q_col_5'}, {txt:"Travail en solo",val:10,next:'q_col_5'}] },
+        'q_col_5': { useGuide: true, bgType: 'accueil', text: "Q5/5 : L'anglais pour toi c'est...", choices: [{txt:"Facile (I speak very well)",val:20,next:'transition_couloir'}, {txt:"Difficile (Help me)",val:0,next:'transition_couloir'}] },
+
+        'q_lyc_1': { useGuide: true, bgType: 'accueil', text: "Q1/5 : Ta spécialité préférée ?", choices: [{txt:"Maths / NSI / STI2D",val:30,next:'q_lyc_2'}, {txt:"Littérature / Histoire / SES",val:0,next:'q_lyc_2'}] },
+        'q_lyc_2': { useGuide: true, bgType: 'accueil', text: "Q2/5 : Tu veux créer...", choices: [{txt:"Des Sites Web & Logiciels",val:20,next:'q_lyc_3'}, {txt:"Des Systèmes Sécurisés",val:30,next:'q_lyc_3'}] },
+        'q_lyc_3': { useGuide: true, bgType: 'accueil', text: "Q3/5 : Face à un bug informatique...", choices: [{txt:"Je cherche l'erreur jusqu'au bout",val:30,next:'q_lyc_4'}, {txt:"J'abandonne vite",val:0,next:'q_lyc_4'}] },
+        'q_lyc_4': { useGuide: true, bgType: 'accueil', text: "Q4/5 : Linux, tu connais ?", choices: [{txt:"Oui, j'ai déjà utilisé",val:20,next:'q_lyc_5'}, {txt:"Jamais entendu parler",val:0,next:'q_lyc_5'}] },
+        'q_lyc_5': { useGuide: true, bgType: 'accueil', text: "Q5/5 : Après le BTS, tu vises...", choices: [{txt:"L'école d'ingénieur",val:30,next:'transition_couloir'}, {txt:"Le monde du travail",val:10,next:'transition_couloir'}] },
+
+        'q_etu_1': { useGuide: true, bgType: 'accueil', text: "Q1/5 : Ton parcours précédent ?", choices: [{txt:"Scientifique / Technique",val:30,next:'q_etu_2'}, {txt:"Autre / Reconversion",val:10,next:'q_etu_2'}] },
+        'q_etu_2': { useGuide: true, bgType: 'accueil', text: "Q2/5 : Tu es plus Hardware ou Software ?", choices: [{txt:"Hardware (Matériel / Réseaux)",val:20,next:'q_etu_3'}, {txt:"Software (Développement)",val:20,next:'q_etu_3'}] },
+        'q_etu_3': { useGuide: true, bgType: 'accueil', text: "Q3/5 : La cybersécurité, c'est...", choices: [{txt:"Une passion / Un objectif",val:30,next:'q_etu_4'}, {txt:"Juste une option intéressante",val:10,next:'q_etu_4'}] },
+        'q_etu_4': { useGuide: true, bgType: 'accueil', text: "Q4/5 : Ton niveau actuel en code ?", choices: [{txt:"Intermédiaire (Je code un peu)",val:30,next:'q_etu_5'}, {txt:"Grand Débutant",val:10,next:'q_etu_5'}] },
+        'q_etu_5': { useGuide: true, bgType: 'accueil', text: "Q5/5 : Pourquoi choisir ce BTS ?", choices: [{txt:"Pour la pratique et le concret",val:30,next:'transition_couloir'}, {txt:"Le diplôme avant tout",val:10,next:'transition_couloir'}] },
+
+        'transition_couloir': {
+            useGuide: true, bgType: 'accueil',
+            text: "C'est noté ! J'ai bien cerné ton profil. Allez, suis-moi, on passe aux choses sérieuses : la visite technique.",
+            // ⚠️ TEMPS D'ATTENTE AUGMENTÉ À 7.5 SECONDES ⚠️
+            action: function() { setTimeout(() => { goto('couloir'); }, 7500); }
+        },
+        'couloir': {
+            useGuide: true, bgType: 'couloir', hideChar: true, 
+            text: "Nous voici devant les labos de BTS SNIR... Euh pardon, BTS CIEL ! C'est le nouveau nom : Cybersécurité, Informatique et Électronique.",
+            choices: [ { txt: "D'accord, continuons", next: 'porte' } ]
+        },
+        'porte': {
+            useGuide: true, bgType: 'porte', hideChar: true, checkSkip: true,
+            text: "C'est la salle A032. Notre QG. C'est ici que nous avons tout le matériel pour travailler.",
+            choices: [ { txt: "Entrer", next: 'salle' } ]
+        },
+        'salle': {
+            useGuide: true, bgType: 'salle', hideChar: true,
+            text: "Installe-toi ! Je vais te montrer les projets concrets sur lesquels on travaille.",
+            choices: [ { txt: "Voir les projets", next: 'projet_1' } ]
+        },
+        
+        'projet_1': {
+            useGuide: true, hideChar: true, 
+            text: "Projet 1 : Administration Système. On apprend à configurer des serveurs, gérer des utilisateurs et sécuriser des réseaux d'entreprise.",
+            bg: 'projets1.jpg?v=7', forceContain: true, 
+            choices: [ { txt: "Suivant", next: 'projet_video_demo' } ]
+        },
+        'projet_video_demo': {
+            useGuide: true, hideChar: true,
+            text: "Voici une courte démonstration vidéo d'un projet étudiant...",
+            bg: 'projets1.jpg?v=7', forceContain: true,
+            choices: [ { txt: "Lancer la vidéo", action: () => playVideo('assets/video_projet.mp4', 'projet_2') } ]
+        },
+        'projet_2': {
+            useGuide: true, hideChar: true,
+            text: "Projet 2 : Internet des Objets (IoT). Nous avons programmé cette carte ESP32 pour récupérer des données et communiquer via le Wi-Fi.",
+            bg: 'projets2.jpg?v=7', forceContain: true,
+            choices: [ { txt: "Suivant", next: 'projet_3' } ]
+        },
+        'projet_3': {
+            useGuide: true, hideChar: true,
+            text: "Projet 3 : Conception de Jeu Vidéo. Regarde cette manette ! On a conçu le boîtier, assemblé l'électronique et programmé le jeu nous-mêmes.",
+            bg: 'projets3.jpg?v=7', forceContain: true, 
+            choices: [ { txt: "Suivant", next: 'projet_4' } ]
+        },
+        'projet_4': {
+            useGuide: true, hideChar: true,
+            text: "Projet 4 : Mesures & Électronique. Ici, on utilise des oscilloscopes pour analyser les signaux électriques et vérifier le bon fonctionnement des circuits.",
+            bg: 'projets4.jpg?v=7', forceContain: true, 
+            choices: [ { txt: "Impressionnant", next: 'intro_hack' } ]
+        },
+        'intro_hack': {
+            char: 'JJ', 
+            text: "Merci pour cette présentation. Pour finir, je vous invite à découvrir 'Passe ton Hack', notre événement dédié à la cybersécurité.",
+            bg: 'entree_lycee.jpg', 
+            choices: [ { txt: "Lancer la vidéo", action: () => playVideo('assets/vvf.mp4', 'demande_save') } ]
+        },
+        
+        'demande_save': {
+            char: 'JJ',
+            text: "Veux-tu valider et enregistrer ton passage à cette Journée Portes Ouvertes ?",
+            bg: 'fin.jpg',
+            choices: [ 
+                { txt: "OUI", action: () => { sendData(); goto('final_message'); } },
+                { txt: "NON", action: () => { sendData(); goto('final_message'); } } 
+            ]
+        },
+
+        'final_message': {
+            char: 'JJ',
+            text: "C'est enregistré. Merci de votre visite au Lycée Jean Jaurès. N'hésitez pas à explorer notre visite virtuelle 360°.",
+            bg: 'fin.jpg',
+            choices: [ 
+                { txt: "Visite 360° (Site Web)", action: quitApp360 },
+                { txt: "Recommencer", next: 'reload' }
+            ]
+        }
+    };
+
+    // --- FONCTIONS ---
+    function showCharacterSelection() {
+        let ui = document.getElementById('choices-area');
+        ui.innerHTML = ''; ui.className = 'char-select-grid active'; 
+        const guides = [{ id: 'DAVINA' }, { id: 'UGO' }, { id: 'DEMA' }];
+        guides.forEach(g => {
+            let btn = document.createElement('div'); btn.className = 'char-card'; btn.innerText = g.id;
+            btn.onclick = () => { userData.selectedGuide = g.id; goto('accueil'); };
+            ui.appendChild(btn);
+        });
+    }
+
+    function routerQuiz(niveau) { goto(`q_${niveau.toLowerCase()}_1`); }
+
+    function goto(id) {
+        if(id === 'reload') location.reload();
+        
+        // EXCEPTION DAVINA (Pas de porte)
+        if (id === 'porte' && userData.selectedGuide === 'DAVINA') { goto('salle'); return; }
+
+        let sc = scenes[id];
+        let guide = userData.selectedGuide; 
+        let charName = '', charImg = '', bgImage = sc.bg;
+
+        if (sc.useGuide) {
+            charName = guide; 
+            if (sc.bgType) bgImage = `${guide.toLowerCase()}_${sc.bgType}.jpg`;
+        } else {
+            if (sc.char) { charName = CHARS[sc.char].name; charImg = CHARS[sc.char].img; }
+        }
+
+        let configChar = CHARS[sc.useGuide ? guide : sc.char] || CHARS['JJ'];
+        let bgDiv = document.getElementById('background');
+        if (bgImage && !bgImage.includes('?')) bgImage += '?v=9';
+        bgDiv.style.backgroundImage = `url('${bgImage}')`;
+        
+        if (sc.forceContain) bgDiv.classList.add('force-contain');
+        else bgDiv.classList.remove('force-contain');
+        
+        let container = document.getElementById('char-container');
+        let img = document.getElementById('char-img');
+        let uiLayer = document.getElementById('ui-layer');
+        let dialogueBox = document.getElementById('dialogue-box');
+
+        container.className = ''; uiLayer.className = ''; dialogueBox.className = '';
+
+        if (sc.useGuide) dialogueBox.classList.add(`style-${guide}`);
+        else if (sc.char) dialogueBox.classList.add(`style-${sc.char}`);
+
+        if (sc.adjustJJ) { container.classList.add('jj-selection'); uiLayer.classList.add('ui-lifted'); }
+        if (guide === 'DEMA' && !sc.hideChar) container.classList.add('dema-pos');
+
+        if(charImg && !sc.hideChar) { 
+            if (img.src.indexOf(charImg) === -1) {
+                img.style.opacity = '0';
+                setTimeout(() => { img.src = charImg; img.style.display = 'block'; img.style.opacity = '1'; }, 200); 
+            } else { img.style.display = 'block'; img.style.opacity = '1'; }
+        } else { 
+            img.style.opacity = '0'; setTimeout(() => { img.style.display = 'none'; }, 300);
+        }
+
+        document.getElementById('speaker-name').innerText = (sc.useGuide ? guide : configChar.name);
+        let color = '#00e5ff'; 
+        let activeName = sc.useGuide ? guide : sc.char;
+        if(activeName === 'DAVINA') color = 'var(--davina-color)';
+        else if(activeName === 'UGO') color = 'var(--ugo-color)';
+        else if(activeName === 'DEMA') color = 'var(--dema-color)';
+        else if(activeName === 'JJ') color = '#ffffff';
+        document.getElementById('speaker-name').style.background = color;
+        
+        let txtContent = (typeof sc.text === 'function') ? sc.text(userData.prenom) : sc.text;
+        typeWriter(txtContent);
+
+        // --- LECTURE AUDIO ---
+        playSceneAudio(id);
+
+        let ui = document.getElementById('choices-area');
+        ui.innerHTML = ''; ui.className = ''; ui.classList.remove('active');
+
+        if(sc.customChoices) { setTimeout(showCharacterSelection, 400); return; }
+        if(sc.action && !sc.choices && !sc.input) { sc.action(); return; }
+
+        setTimeout(() => {
+            if(sc.input) {
+                ui.innerHTML = `<div class="input-group"><input type="text" id="user-input" placeholder="Ton prénom..."><button class="valid-btn" onclick="validateInput('${sc.next}')">OK</button></div>`;
+            } else if (sc.choices) {
+                sc.choices.forEach(c => {
+                    let btn = document.createElement('div');
+                    btn.className = 'btn-choice';
+                    btn.innerHTML = `${c.txt} <span>${c.sub || ''}</span>`;
+                    btn.onclick = () => {
+                        if(c.action) { c.action(); return; }
+                        if(c.save) userData[c.save] = c.txt;
+                        if(c.val) userData.score += c.val;
+                        goto(c.next);
+                    };
+                    ui.appendChild(btn);
+                });
+            }
+            if(ui.innerHTML !== '') ui.classList.add('active');
+        }, 400);
+    }
+
+    function playVideo(videoFile, nextSceneId) {
+        if(currentAudio) { currentAudio.pause(); } 
+        let layer = document.getElementById('video-layer');
+        let vid = document.getElementById('main-player');
+        let skip = document.getElementById('skip-btn');
+        currentVideoCallback = nextSceneId;
+        vid.src = videoFile; layer.style.display = 'flex'; skip.style.display = 'block';
+        vid.play().catch(e => console.log("Clic requis"));
+        vid.onended = stopVideo;
+    }
+
+    function stopVideo() {
+        let layer = document.getElementById('video-layer');
+        let vid = document.getElementById('main-player');
+        vid.pause(); layer.style.display = 'none';
+        if(currentVideoCallback) goto(currentVideoCallback);
+    }
+
+    function validateInput(next) {
+        let val = document.getElementById('user-input').value.trim();
+        if(val) { userData.prenom = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase(); goto(next); }
+    }
+    
+    function quitApp360() { window.location.href = "https://my.web-visite.com/F1ltEQAj8H/12357121p&288.44h&90.09t"; }
+
+    function typeWriter(txt) {
+        if (typeWriterTimeout) clearTimeout(typeWriterTimeout);
+        let el = document.getElementById('text-content'); 
+        el.innerHTML = ""; 
+        let i = 0;
+        function t() { 
+            if(i < txt.length) { 
+                el.innerHTML += txt.charAt(i); 
+                i++; 
+                typeWriterTimeout = setTimeout(t, 20); 
+            } else { typeWriterTimeout = null; }
+        } 
+        t();
+    }
+    
+    // ENVOI DONNEES NETLIFY
+    function sendData() {
+        const formData = new FormData();
+        formData.append("form-name", "visite-jpo");
+        formData.append("prenom", userData.prenom);
+        formData.append("guide_choisi", userData.selectedGuide);
+        formData.append("statut", userData.statut);
+
+        fetch("/", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(formData).toString(),
+        })
+        .then(() => {
+            alert("✅ Visite bien enregistrée !");
+        })
+        .catch((error) => alert("Erreur d'envoi : " + error));
+    }
+
+    // Le script ne se lance pas seul, il attend le clic sur "COMMENCER"
+</script>
+</body>
+</html>
